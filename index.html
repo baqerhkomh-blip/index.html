@@ -33,12 +33,17 @@ function Team({t,sm}){return <div className="flex items-center gap-2"><span clas
 function Box({v,on}){return <input type="number" min="0" value={v} onChange={e=>on(e.target.value)} placeholder="-" className="w-11 h-10 text-center bg-slate-900 text-white font-extrabold rounded-xl border border-cyan-400"/>}
 
 function KO({m,sc,admin,on,fin}){
+  const tie=has(sc)&&+sc.home===+sc.away&&m.home&&m.away;
   return <div className={"rounded-2xl p-3 border "+(fin?"border-amber-400 border-2 bg-[#0b3b54]":"border-cyan-500/30 bg-[#073349]")}>
     <div className="text-xs font-bold text-cyan-300 mb-2 text-center">{m.title}</div>
-    {["home","away"].map(side=>{const t=m[side];return <div key={side} className="flex items-center justify-between gap-2 bg-[#041f30]/70 p-2 rounded-xl mb-2">
+    {["home","away"].map(side=>{const t=m[side],pk=side==="home"?"ph":"pa",pv=sc[pk]===undefined?"":sc[pk];return <div key={side} className="flex items-center justify-between gap-2 bg-[#041f30]/70 p-2 rounded-xl mb-2">
       {t?<Team t={t} sm/>:<span className="text-xs text-slate-400 italic">بانتظار المتأهل...</span>}
-      {admin&&t?<input type="number" min="0" value={sc[side]} onChange={e=>on(m.id,side,e.target.value)} placeholder="-" className="w-10 h-8 text-center bg-slate-900 text-amber-300 font-bold rounded-lg border border-cyan-500/50"/>:<span className="font-extrabold text-amber-300 px-2">{sc[side]!==""&&sc[side]!==undefined?sc[side]:"-"}</span>}
+      <div className="flex items-center gap-1">
+        {admin&&t?<input type="number" min="0" value={sc[side]} onChange={e=>on(m.id,side,e.target.value)} placeholder="-" className="w-10 h-8 text-center bg-slate-900 text-amber-300 font-bold rounded-lg border border-cyan-500/50"/>:<span className="font-extrabold text-amber-300 px-2">{sc[side]!==""&&sc[side]!==undefined?sc[side]:"-"}</span>}
+        {tie&&(admin?<input type="number" min="0" value={pv} onChange={e=>on(m.id,pk,e.target.value)} placeholder="ر" className="w-9 h-8 text-center bg-slate-900 text-emerald-300 font-bold rounded-lg border border-emerald-500/50 text-xs"/>:(pv!==""?<span className="text-emerald-300 text-xs font-bold">({pv})</span>:null))}
+      </div>
     </div>})}
+    {tie&&<div className="text-[10px] text-emerald-300 text-center">تعادل: تُحسم بركلات الترجيح (خانة ر)</div>}
   </div>}
 
 function App(){
@@ -68,11 +73,13 @@ function App(){
     return r},[s]);
   const thirds=useMemo(()=>Object.keys(standings).map(g=>standings[g][2]).sort(cmp),[standings]);
   const br=useMemo(()=>{
-    const T=thirds.slice(0,4),S=standings;
+    const S=standings,T4=thirds.slice(0,4),slots=["B","F","E","C"];
+    const pick=(i,used)=>{if(i===4)return[];for(let j=0;j<4;j++){if(used.includes(j)||T4[j].group===slots[i])continue;const r=pick(i+1,[...used,j]);if(r)return[T4[j],...r]}return null};
+    const T=pick(0,[])||T4;
     const r16=[["B0",T[0]],["A0","C1"],["F0",T[1]],["D1","E1"],["E0",T[2]],["D0","F1"],["C0",T[3]],["A1","B1"]].map((p,i)=>{
       const f=x=>typeof x==="string"?S[x[0]][+x[1]]:x;
       return {id:"R16_"+(i+1),title:"ثمن النهائي "+(i+1),home:f(p[0]),away:f(p[1])}});
-    const win=m=>{const sc=k[m.id];if(!has(sc)||!m.home||!m.away)return null;return +sc.away>+sc.home?m.away:m.home};
+    const win=m=>{const sc=k[m.id];if(!has(sc)||!m.home||!m.away)return null;const h=+sc.home,a=+sc.away;if(h!==a)return h>a?m.home:m.away;const p=sc.ph,q=sc.pa;if(p===undefined||q===undefined||p===""||q===""||+p===+q)return null;return +p>+q?m.home:m.away};
     const mk=(id,t,a,b)=>({id,title:t,home:win(a),away:win(b)});
     const qf=[0,1,2,3].map(i=>mk("QF_"+(i+1),"ربع النهائي "+(i+1),r16[2*i],r16[2*i+1]));
     const sf=[0,1].map(i=>mk("SF_"+(i+1),"نصف النهائي "+(i+1),qf[2*i],qf[2*i+1]));
@@ -157,4 +164,4 @@ function App(){
   </form></div>}</div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
-</body></html> 
+</body></html>
