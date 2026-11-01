@@ -121,8 +121,8 @@ function App(){
             return <div key={m.id} className="bg-[#073349] border border-cyan-500/30 rounded-2xl p-3 flex items-center justify-between gap-2">
               <div className="flex-1"><Team t={m.home}/></div>
               <div className="flex flex-col items-center"><span className="text-[10px] text-amber-300 mb-1 font-bold">مجموعة {m.group}</span>
-                {admin?<div className="flex items-center gap-1" dir="ltr"><Box v={sc.home} on={v=>setScore(m.id,"home",v)}/><span>:</span><Box v={sc.away} on={v=>setScore(m.id,"away",v)}/></div>
-                :<div className="px-3 py-1.5 bg-[#041f30] rounded-xl font-extrabold text-lg text-amber-300" dir="ltr">{has(sc)?sc.home+" - "+sc.away:"VS"}</div>}
+                {admin?<div className="flex items-center gap-1" dir="ltr"><Box v={sc.away} on={v=>setScore(m.id,"away",v)}/><span>:</span><Box v={sc.home} on={v=>setScore(m.id,"home",v)}/></div>
+                :<div className="px-3 py-1.5 bg-[#041f30] rounded-xl font-extrabold text-lg text-amber-300" dir="ltr">{has(sc)?sc.away+" - "+sc.home:"VS"}</div>}
               </div>
               <div className="flex-1 flex justify-end"><Team t={m.away}/></div>
             </div>})}
@@ -157,4 +157,4 @@ function App(){
   </form></div>}</div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
-</body></html>
+</body></html> 
