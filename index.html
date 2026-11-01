@@ -111,10 +111,10 @@ function App(){
       {tab==="groups"&&<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {Object.keys(standings).map(g=><div key={g} className="bg-[#073349] border-2 border-amber-400/70 rounded-2xl overflow-hidden">
           <div className="bg-[#042030] py-3 px-4 font-extrabold">المجموعة {g}</div>
-          <div className="p-3 overflow-x-auto"><table className="w-full text-sm"><thead><tr className={th}><th className="text-right">#</th><th className="text-right">المشارك</th><th>لعب</th><th>فارق</th><th>نقاط</th></tr></thead><tbody>
+          <div className="p-3 overflow-x-auto"><table className="w-full text-sm"><thead><tr className={th}><th className="text-right">#</th><th className="text-right">المشارك</th><th>لعب</th><th>له</th><th>عليه</th><th>فارق</th><th>نقاط</th></tr></thead><tbody>
             {standings[g].map((t,i)=><tr key={t.id} className={i<2?"bg-emerald-500/10":i===2?"bg-amber-500/5":""}>
               <td className="py-2 font-bold">{i+1}</td><td className="py-2"><Team t={t} sm/></td>
-              <td className="text-center">{t.played}</td><td className="text-center" dir="ltr">{t.gd>0?"+"+t.gd:t.gd}</td><td className="text-center font-extrabold text-amber-300 text-base">{t.pts}</td></tr>)}
+              <td className="text-center">{t.played}</td><td className="text-center">{t.gf}</td><td className="text-center">{t.ga}</td><td className="text-center" dir="ltr">{t.gd>0?"+"+t.gd:t.gd}</td><td className="text-center font-extrabold text-amber-300 text-base">{t.pts}</td></tr>)}
           </tbody></table></div></div>)}
       </div>}
 
@@ -164,4 +164,4 @@ function App(){
   </form></div>}</div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
-</body></html>
+</body></html> 
