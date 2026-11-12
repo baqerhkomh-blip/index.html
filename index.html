@@ -38,9 +38,9 @@ const gen=P=>{const[a,b,c]=P,fx=[];
 const num=v=>v===""?"":Math.max(0,parseInt(v,10)||0);
 const tn=v=>v===undefined||v===""||v===null?null:+v;
 const has=f=>tn(f.hs)!==null&&tn(f.as)!==null;
-const calc=D=>{const st={};D.players.forEach(p=>st[p.id]={p,pl:0,gf:0,ga:0,w:0,pts:0});
+const calc=D=>{const st={};D.players.forEach(p=>st[p.id]={p,pl:0,gf:0,ga:0,w:0,d:0,l:0,pts:0});
   D.fx.forEach(f=>{const H=st[f.h],A=st[f.a];if(!H||!A||!has(f))return;const h=+f.hs,a=+f.as;H.pl++;A.pl++;H.gf+=h;H.ga+=a;A.gf+=a;A.ga+=h;
-    if(h>a){H.w++;H.pts+=3}else if(a>h){A.w++;A.pts+=3}else{H.pts++;A.pts++}});
+    if(h>a){H.w++;A.l++;H.pts+=3}else if(a>h){A.w++;H.l++;A.pts+=3}else{H.d++;A.d++;H.pts++;A.pts++}});
   return Object.values(st).map(s=>({...s,gd:s.gf-s.ga})).sort((x,y)=>y.pts-x.pts||y.gd-x.gd||y.gf-x.gf||y.w-x.w)};
 const agg=(d,s)=>{const a=[tn(d.a1),tn(d.b1)];if(!s)a.push(tn(d.a2),tn(d.b2));if(a.some(x=>x===null))return null;return s?{A:a[0],B:a[1]}:{A:a[0]+a[2],B:a[1]+a[3]}};
 const winner=(A,B,d,s)=>{if(!A||!B)return null;const g=agg(d,s);if(!g)return null;if(g.A!==g.B)return g.A>g.B?A:B;
@@ -72,8 +72,12 @@ function App(){
   const [D,setD]=useState(DEF),[tab,setTab]=useState("table"),[r,setR]=useState(1),[open,setOpen]=useState(null);
   const [user,setUser]=useState(null),[login,setLogin]=useState(false),[pw,setPw]=useState(""),[err,setErr]=useState(""),[np,setNp]=useState("");
   useEffect(()=>{const a=ref.onSnapshot(d=>setD({...DEF,...(d.data()||{})}));const b=auth.onAuthStateChanged(setUser);return()=>{a();b()}},[]);
+  const [sel,setSel]=useState(null),[cf,setCf]=useState(null),[pw2,setPw2]=useState(""),[er2,setEr2]=useState("");
   const admin=!!user&&user.email===EM;
   const save=n=>{setD(n);ref.set(n).catch(()=>alert("تعذّر الحفظ، تأكد من تسجيل الدخول بحساب الأدمن"))};
+  const doConf=async e=>{e.preventDefault();try{await user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(EM,pw2));
+      if(cf==="r")save({...D,fx:D.fx.map(f=>({...f,hs:"",as:""})),ties:{}});else{setSel(null);save({...D,...wipe()})}
+      setCf(null);setPw2("");setEr2("")}catch(x){setEr2("كلمة المرور غير صحيحة")}};
   const doLogin=async e=>{e.preventDefault();try{await auth.signInWithEmailAndPassword(EM,pw);setLogin(false);setPw("");setErr("")}catch(x){setErr("كلمة المرور غير صحيحة")}};
   const P=id=>D.players.find(p=>p.id===id);
   const R=useMemo(()=>calc(D),[D]);
@@ -85,8 +89,8 @@ function App(){
   const startDraw=()=>{const Q=[1,2,3].map(k=>D.players.filter(p=>p.pot===k).map(p=>p.id));
     if(D.players.length!==24||Q.some(x=>x.length!==8)){alert("يجب أن يكون عدد اللاعبين 24 بواقع 8 في كل مستوى");return}
     if(D.fx.length&&!confirm("سيتم مسح القرعة والنتائج الحالية، متابعة؟"))return;save({...D,fx:gen(Q),rev:[],cur:null,last:null,ties:{}})};
-  const pick=()=>{const l=D.players.filter(p=>!D.rev.includes(p.id));if(l.length)save({...D,cur:l[Math.random()*l.length|0].id})};
-  const reveal=()=>save({...D,rev:[...D.rev,D.cur],last:D.cur,cur:null});
+  const pick=()=>{setSel(null);const l=D.players.filter(p=>!D.rev.includes(p.id));if(l.length)save({...D,cur:l[Math.random()*l.length|0].id})};
+  const reveal=()=>{setSel(null);save({...D,rev:[...D.rev,D.cur],last:D.cur,cur:null})};
   const {ties,po,r16,qf,sf,fin}=useMemo(()=>{
     const sd=n=>R[n-1]?R[n-1].p:null,ties={};
     const T=(id,title,A,B,s)=>{const d=D.ties[id]||{},t={id,title,A,B,single:s,d};t.w=winner(A,B,d,s);ties[id]=t;return t};
@@ -100,7 +104,7 @@ function App(){
   const zone=i=>i<10?"bg-emerald-500 text-emerald-950":i<22?"bg-amber-400 text-amber-950":"bg-rose-500 text-white";
   const mini=(t,side)=><Mini key={t.id} t={t} side={side} on={()=>setOpen(t.id)}/>;
   const col=(arr,side)=><div className="flex flex-col justify-around gap-3">{arr.map(t=>mini(t,side))}</div>;
-  const last=D.last&&P(D.last),cur=D.cur&&P(D.cur);
+  const last=D.last&&P(D.last),cur=D.cur&&P(D.cur),shown=(sel&&P(sel))||last;
   const opp=id=>D.fx.filter(f=>f.h===id||f.a===id).sort((a,b)=>a.r-b.r);
   const inp="w-full p-2 rounded-lg bg-[#050a2e] border border-sky-400/30 text-sm";
   return <div className="min-h-screen pb-16">
@@ -112,10 +116,10 @@ function App(){
       <div className="max-w-6xl mx-auto px-4 flex gap-2 overflow-x-auto pb-3">{tabs.map(([k,l,i])=><button key={k} onClick={()=>setTab(k)} className={"flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap "+(tab===k?"bg-sky-400 text-[#050a2e]":"bg-white/5 text-sky-100 border border-white/10")}><Ic n={i}/>{l}</button>)}</div>
     </header>
     <main className="max-w-6xl mx-auto px-4 pt-5">
-    {tab==="table"&&<div><div className="rounded-xl border border-sky-400/20 bg-[#08114a]/80 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-sky-300/80 text-xs border-b border-white/10"><th className="p-2 text-right">#</th><th className="p-2 text-right">اللاعب</th><th>لعب</th><th>له</th><th>عليه</th><th>فارق</th><th>نقاط</th></tr></thead><tbody>
+    {tab==="table"&&<div><div className="rounded-xl border border-sky-400/20 bg-[#08114a]/80 overflow-x-auto"><table className="w-full text-[13px]"><thead><tr className="text-sky-300/80 text-xs border-b border-white/10"><th className="p-2 text-right">#</th><th className="p-2 text-right">اللاعب</th><th>لعب</th><th>فاز</th><th>خسر</th><th>تعادل</th><th>له</th><th>عليه</th><th>الفرق</th><th>النقاط</th></tr></thead><tbody>
       {R.map((s,i)=><tr key={s.p.id} className="border-b border-white/5"><td className="p-2"><span className={"inline-flex w-6 h-6 rounded-full items-center justify-center text-xs font-extrabold "+zone(i)}>{i+1}</span></td>
         <td className="p-2"><div className="flex items-center gap-2"><Badge p={s.p} s={28}/><div><div className="font-bold leading-tight">{s.p.name}</div><div className="text-[11px] text-sky-300/70">{(CM[s.p.club]||CM.x)[1]}</div></div></div></td>
-        <td className="text-center">{s.pl}</td><td className="text-center">{s.gf}</td><td className="text-center">{s.ga}</td><td className="text-center" dir="ltr">{s.gd>0?"+"+s.gd:s.gd}</td><td className="text-center font-extrabold text-sky-300 text-base">{s.pts}</td></tr>)}
+        <td className="text-center">{s.pl}</td><td className="text-center">{s.w}</td><td className="text-center">{s.l}</td><td className="text-center">{s.d}</td><td className="text-center">{s.gf}</td><td className="text-center">{s.ga}</td><td className="text-center" dir="ltr">{s.gd>0?"+"+s.gd:s.gd}</td><td className="text-center font-extrabold text-sky-300 text-base">{s.pts}</td></tr>)}
       </tbody></table></div>
       <div className="flex flex-wrap gap-4 mt-3 text-xs text-white/70">{[["bg-emerald-500","1-10 مباشرة إلى دور الـ 16"],["bg-amber-400","11-22 الملحق"],["bg-rose-500","23-24 خروج"]].map(([c,t])=><span key={t} className="flex items-center gap-1.5"><i className={"w-3 h-3 rounded-full "+c}/>{t}</span>)}</div></div>}
 
@@ -141,17 +145,17 @@ function App(){
         <div className="text-xs text-sky-300">تمت قرعة {D.rev.length} من {D.players.length}</div>
         {!D.fx.length&&<div className="text-white/70 text-sm py-4">لم تبدأ القرعة بعد.</div>}
         {cur&&<div className="flex flex-col items-center gap-2 py-2"><Badge p={cur} s={84}/><div className="text-xl font-extrabold">{cur.name}</div><div className="text-sm text-sky-300">{(CM[cur.club]||CM.x)[1]}</div><div className="text-xs text-white/60">بانتظار قرعة المواجهات</div></div>}
-        {!cur&&last&&<div className="space-y-3"><div className="flex items-center justify-center gap-3"><Badge p={last} s={52}/><div className="text-right"><div className="font-extrabold">{last.name}</div><div className="text-xs text-sky-300">{(CM[last.club]||CM.x)[1]}</div></div></div>
-          <div className="space-y-1.5">{opp(last.id).map(f=>{const home=f.h===last.id,o=P(home?f.a:f.h);return o&&<div key={f.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm"><span className="text-[11px] text-sky-300 w-14 text-right">الجولة {f.r}</span><Badge p={o} s={22}/><span className="flex-1 text-right font-bold">{o.name}</span><span className={"text-[11px] px-2 py-0.5 rounded-full "+(home?"bg-emerald-500/20 text-emerald-300":"bg-white/10 text-white/60")}>{home?"على أرضه":"خارج أرضه"}</span></div>})}</div></div>}
+        {!cur&&shown&&<div className="space-y-3"><div className="flex items-center justify-center gap-3"><Badge p={shown} s={52}/><div className="text-right"><div className="font-extrabold">{shown.name}</div><div className="text-xs text-sky-300">{(CM[shown.club]||CM.x)[1]}</div></div></div>
+          <div className="space-y-1.5">{opp(shown.id).map(f=>{const home=f.h===shown.id,o=P(home?f.a:f.h);return o&&<div key={f.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm"><span className="text-[11px] text-sky-300 w-14 text-right">الجولة {f.r}</span><Badge p={o} s={22}/><span className="flex-1 text-right font-bold">{o.name}</span><span className={"text-[11px] px-2 py-0.5 rounded-full "+(home?"bg-emerald-500/20 text-emerald-300":"bg-white/10 text-white/60")}>{home?"على أرضه":"خارج أرضه"}</span></div>})}</div></div>}
         {admin&&<div className="flex flex-col gap-2 pt-2">
           {!D.fx.length?<button onClick={startDraw} className="py-3 rounded-lg bg-sky-400 text-[#050a2e] font-extrabold">بدء القرعة</button>:
           cur?<button onClick={reveal} className="py-3 rounded-lg bg-emerald-400 text-emerald-950 font-extrabold">إجراء قرعة المواجهات</button>:
           <button onClick={pick} disabled={D.rev.length>=D.players.length} className="py-3 rounded-lg bg-sky-400 text-[#050a2e] font-extrabold disabled:opacity-40">سحب نادٍ</button>}</div>}</div>
-      {D.rev.length>0&&<div className="flex flex-wrap gap-2 justify-center">{D.rev.map(id=>{const p=P(id);return p&&<span key={id} className="flex items-center gap-1.5 text-xs bg-white/5 rounded-full pl-3 pr-1 py-1"><Badge p={p} s={20}/>{p.name}</span>})}</div>}</div>}
+      {D.rev.length>0&&<div className="flex flex-wrap gap-2 justify-center"><div className="w-full text-center text-[11px] text-white/50">اضغط على اسم أي لاعب لعرض خصومه</div>{D.rev.map(id=>{const p=P(id);return p&&<button key={id} onClick={()=>setSel(id)} className={"flex items-center gap-1.5 text-xs rounded-full pl-3 pr-1 py-1 "+(shown&&shown.id===id?"bg-sky-400 text-[#050a2e] font-bold":"bg-white/5")}><Badge p={p} s={20}/>{p.name}</button>})}</div>}</div>}
 
     {tab==="adm"&&admin&&<div className="space-y-4">
       <div className="rounded-xl border border-sky-400/20 bg-[#08114a]/80 p-4 text-sm flex flex-wrap gap-4 items-center justify-between"><div>اللاعبون: <b>{D.players.length}</b> / 24 &nbsp;|&nbsp; المستويات: {[1,2,3].map(k=><span key={k} className="ml-2">م{k}: <b>{D.players.filter(p=>p.pot===k).length}</b>/8</span>)} &nbsp; بلا مستوى: <b>{D.players.filter(p=>!p.pot).length}</b></div>
-        <div className="flex gap-2"><button onClick={()=>confirm("مسح كل النتائج مع إبقاء القرعة؟")&&save({...D,fx:D.fx.map(f=>({...f,hs:"",as:""})),ties:{}})} className="px-3 py-2 rounded-lg bg-amber-400/20 text-amber-300 text-xs font-bold">تصفير النتائج</button><button onClick={()=>confirm("مسح القرعة والنتائج بالكامل؟")&&save({...D,...wipe()})} className="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold">إعادة ضبط القرعة</button></div></div>
+        <div className="flex gap-2"><button onClick={()=>setCf("r")} className="px-3 py-2 rounded-lg bg-amber-400/20 text-amber-300 text-xs font-bold">تصفير النتائج</button><button onClick={()=>setCf("d")} className="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold">إعادة ضبط القرعة</button></div></div>
       <div className="grid gap-3 md:grid-cols-2">{D.players.map(p=><div key={p.id} className="rounded-xl border border-white/10 bg-[#08114a]/80 p-3 space-y-2">
         <div className="flex items-center gap-2"><Badge p={p} s={34}/><input key={p.id+"n"} defaultValue={p.name} onBlur={e=>upd(p.id,"name",e.target.value)} className={inp}/><button onClick={()=>del(p.id)} className="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold">حذف</button></div>
         <div className="grid grid-cols-2 gap-2"><select value={p.club} onChange={e=>upd(p.id,"club",e.target.value)} className={inp}>{CL.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select>
@@ -160,6 +164,11 @@ function App(){
       <div className="flex gap-2"><input value={np} onChange={e=>setNp(e.target.value)} placeholder="اسم لاعب جديد" className={inp}/><button onClick={()=>{if(!np.trim())return;save({...D,players:[...D.players,{id:"p"+Date.now(),name:np.trim(),club:"x",logo:"",pot:0}]});setNp("")}} className="px-4 rounded-lg bg-sky-400 text-[#050a2e] font-extrabold text-sm whitespace-nowrap">إضافة</button></div></div>}
     </main>
     {open&&ties[open]&&<Modal t={ties[open]} admin={admin} set={setTie} close={()=>setOpen(null)}/>}
+    {cf&&<div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4"><form onSubmit={doConf} className="bg-[#0a1445] border border-rose-400/40 p-6 rounded-2xl w-full max-w-sm space-y-3"><div className="font-extrabold text-center">{cf==="r"?"تصفير النتائج":"إعادة ضبط القرعة"}</div>
+      <p className="text-xs text-center text-white/70">{cf==="r"?"سيتم مسح كل نتائج المباريات والأدوار الإقصائية مع إبقاء القرعة.":"سيتم مسح القرعة والنتائج بالكامل."} أدخل كلمة المرور للتأكيد.</p>
+      <input type="password" value={pw2} onChange={e=>setPw2(e.target.value)} placeholder="كلمة المرور" dir="ltr" autoFocus className="w-full p-3 rounded-lg bg-[#050a2e] border border-rose-400/40 text-center"/>
+      {er2&&<p className="text-rose-400 text-xs text-center font-bold">{er2}</p>}
+      <div className="flex gap-2"><button type="submit" className="flex-1 bg-rose-500 font-extrabold py-2.5 rounded-lg">تأكيد</button><button type="button" onClick={()=>{setCf(null);setPw2("");setEr2("")}} className="flex-1 bg-white/10 py-2.5 rounded-lg font-bold">إلغاء</button></div></form></div>}
     {login&&<div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4"><form onSubmit={doLogin} className="bg-[#0a1445] border border-sky-400/40 p-6 rounded-2xl w-full max-w-sm space-y-3"><div className="font-extrabold text-center">دخول الأدمن</div>
       <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="كلمة المرور" dir="ltr" autoFocus className="w-full p-3 rounded-lg bg-[#050a2e] border border-sky-400/40 text-center"/>
       {err&&<p className="text-rose-400 text-xs text-center font-bold">{err}</p>}
@@ -167,4 +176,4 @@ function App(){
   </div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
-</body></html>
+</body></html> 
