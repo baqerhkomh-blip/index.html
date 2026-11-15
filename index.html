@@ -41,7 +41,7 @@ const has=f=>tn(f.hs)!==null&&tn(f.as)!==null;
 const calc=D=>{const st={};D.players.forEach(p=>st[p.id]={p,pl:0,gf:0,ga:0,w:0,d:0,l:0,pts:0});
   D.fx.forEach(f=>{const H=st[f.h],A=st[f.a];if(!H||!A||!has(f))return;const h=+f.hs,a=+f.as;H.pl++;A.pl++;H.gf+=h;H.ga+=a;A.gf+=a;A.ga+=h;
     if(h>a){H.w++;A.l++;H.pts+=3}else if(a>h){A.w++;H.l++;A.pts+=3}else{H.d++;A.d++;H.pts++;A.pts++}});
-  return Object.values(st).map(s=>({...s,gd:s.gf-s.ga})).sort((x,y)=>y.pts-x.pts||y.gd-x.gd||y.gf-x.gf||y.w-x.w)};
+  return Object.values(st).map(s=>({...s,gd:s.gf-s.ga})).sort((x,y)=>(x.p.out?1:0)-(y.p.out?1:0)||y.pts-x.pts||y.gd-x.gd||y.gf-x.gf||y.w-x.w)};
 const agg=(d,s)=>{const a=[tn(d.a1),tn(d.b1)];if(!s)a.push(tn(d.a2),tn(d.b2));if(a.some(x=>x===null))return null;return s?{A:a[0],B:a[1]}:{A:a[0]+a[2],B:a[1]+a[3]}};
 const winner=(A,B,d,s)=>{if(!A||!B)return null;const g=agg(d,s);if(!g)return null;if(g.A!==g.B)return g.A>g.B?A:B;
   const ea=tn(d.ea),eb=tn(d.eb);if(ea!==null&&eb!==null&&ea!==eb)return ea>eb?A:B;
@@ -117,8 +117,8 @@ function App(){
     </header>
     <main className="max-w-6xl mx-auto px-4 pt-5">
     {tab==="table"&&<div><div className="rounded-xl border border-sky-400/20 bg-[#08114a]/80 overflow-x-auto"><table className="w-full text-[13px]"><thead><tr className="text-sky-300/80 text-xs border-b border-white/10"><th className="p-2 text-right">#</th><th className="p-2 text-right">اللاعب</th><th>لعب</th><th>فاز</th><th>خسر</th><th>تعادل</th><th>له</th><th>عليه</th><th>الفرق</th><th>النقاط</th></tr></thead><tbody>
-      {R.map((s,i)=><tr key={s.p.id} className="border-b border-white/5"><td className="p-2"><span className={"inline-flex w-6 h-6 rounded-full items-center justify-center text-xs font-extrabold "+zone(i)}>{i+1}</span></td>
-        <td className="p-2"><div className="flex items-center gap-2"><Badge p={s.p} s={28}/><div><div className="font-bold leading-tight">{s.p.name}</div><div className="text-[11px] text-sky-300/70">{(CM[s.p.club]||CM.x)[1]}</div></div></div></td>
+      {R.map((s,i)=><tr key={s.p.id} className={"border-b border-white/5 "+(s.p.out?"bg-rose-500/10":"")}><td className="p-2"><span className={"inline-flex w-6 h-6 rounded-full items-center justify-center text-xs font-extrabold "+(s.p.out?"bg-rose-500 text-white":zone(i))}>{i+1}</span></td>
+        <td className="p-2"><div className="flex items-center gap-2"><Badge p={s.p} s={28}/><div><div className={"font-bold leading-tight "+(s.p.out?"text-rose-300":"")}>{s.p.name}{s.p.out&&<span className="mr-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500 text-white align-middle">تم إقصاؤه</span>}</div><div className="text-[11px] text-sky-300/70">{(CM[s.p.club]||CM.x)[1]}</div></div></div></td>
         <td className="text-center">{s.pl}</td><td className="text-center">{s.w}</td><td className="text-center">{s.l}</td><td className="text-center">{s.d}</td><td className="text-center">{s.gf}</td><td className="text-center">{s.ga}</td><td className="text-center" dir="ltr">{s.gd>0?"+"+s.gd:s.gd}</td><td className="text-center font-extrabold text-sky-300 text-base">{s.pts}</td></tr>)}
       </tbody></table></div>
       <div className="flex flex-wrap gap-4 mt-3 text-xs text-white/70">{[["bg-emerald-500","1-10 مباشرة إلى دور الـ 16"],["bg-amber-400","11-22 الملحق"],["bg-rose-500","23-24 خروج"]].map(([c,t])=><span key={t} className="flex items-center gap-1.5"><i className={"w-3 h-3 rounded-full "+c}/>{t}</span>)}</div></div>}
@@ -156,10 +156,11 @@ function App(){
     {tab==="adm"&&admin&&<div className="space-y-4">
       <div className="rounded-xl border border-sky-400/20 bg-[#08114a]/80 p-4 text-sm flex flex-wrap gap-4 items-center justify-between"><div>اللاعبون: <b>{D.players.length}</b> / 24 &nbsp;|&nbsp; المستويات: {[1,2,3].map(k=><span key={k} className="ml-2">م{k}: <b>{D.players.filter(p=>p.pot===k).length}</b>/8</span>)} &nbsp; بلا مستوى: <b>{D.players.filter(p=>!p.pot).length}</b></div>
         <div className="flex gap-2"><button onClick={()=>setCf("r")} className="px-3 py-2 rounded-lg bg-amber-400/20 text-amber-300 text-xs font-bold">تصفير النتائج</button><button onClick={()=>setCf("d")} className="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold">إعادة ضبط القرعة</button></div></div>
-      <div className="grid gap-3 md:grid-cols-2">{D.players.map(p=><div key={p.id} className="rounded-xl border border-white/10 bg-[#08114a]/80 p-3 space-y-2">
+      <div className="grid gap-3 md:grid-cols-2">{D.players.map(p=><div key={p.id} className={"rounded-xl border bg-[#08114a]/80 p-3 space-y-2 "+(p.out?"border-rose-500/60":"border-white/10")}>
         <div className="flex items-center gap-2"><Badge p={p} s={34}/><input key={p.id+"n"} defaultValue={p.name} onBlur={e=>upd(p.id,"name",e.target.value)} className={inp}/><button onClick={()=>del(p.id)} className="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold">حذف</button></div>
         <div className="grid grid-cols-2 gap-2"><select value={p.club} onChange={e=>upd(p.id,"club",e.target.value)} className={inp}>{CL.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select>
           <select value={p.pot} onChange={e=>upd(p.id,"pot",+e.target.value)} className={inp}><option value={0}>المستوى: غير محدد</option>{[1,2,3].map(k=><option key={k} value={k}>المستوى {k}</option>)}</select></div>
+        <button onClick={()=>{if(p.out||confirm("إقصاء "+p.name+" من البطولة؟ سيُنقل إلى أسفل الترتيب."))upd(p.id,"out",!p.out)}} className={"w-full py-2 rounded-lg text-xs font-bold "+(p.out?"bg-emerald-500/20 text-emerald-300":"bg-rose-500/20 text-rose-300")}>{p.out?"إلغاء الإقصاء":"إقصاء من البطولة"}</button>
         <input key={p.id+"l"} dir="ltr" defaultValue={p.logo} placeholder="رابط شعار مخصص (اختياري)" onBlur={e=>upd(p.id,"logo",e.target.value.trim())} className={inp}/></div>)}</div>
       <div className="flex gap-2"><input value={np} onChange={e=>setNp(e.target.value)} placeholder="اسم لاعب جديد" className={inp}/><button onClick={()=>{if(!np.trim())return;save({...D,players:[...D.players,{id:"p"+Date.now(),name:np.trim(),club:"x",logo:"",pot:0}]});setNp("")}} className="px-4 rounded-lg bg-sky-400 text-[#050a2e] font-extrabold text-sm whitespace-nowrap">إضافة</button></div></div>}
     </main>
@@ -176,4 +177,4 @@ function App(){
   </div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
-</body></html> 
+</body></html>
